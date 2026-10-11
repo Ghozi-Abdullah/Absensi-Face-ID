@@ -8,7 +8,7 @@
 
 </div>
 
-![Layar absen Hadir](docs/layar-absen.png)
+![Layar absen Hadir](layar-absen.png)
 
 Hadir mengubah perangkat yang sudah kamu punya menjadi mesin absensi. Karyawan cukup menatap kamera dan berkedip, lalu jam masuk, status terlambat, dan jam pulang tercatat sendiri. Di akhir bulan, rekapnya sudah siap untuk penggajian.
 
@@ -43,8 +43,8 @@ Kunci menu admin dengan PIN supaya karyawan hanya bisa mengakses layar absen. At
 
 <table>
   <tr>
-    <td><img src="docs/layar-karyawan.png" alt="Daftar karyawan"></td>
-    <td><img src="docs/layar-rekap.png" alt="Rekap kehadiran"></td>
+    <td><img src="layar-karyawan.png" alt="Daftar karyawan"></td>
+    <td><img src="layar-rekap.png" alt="Rekap kehadiran"></td>
   </tr>
   <tr>
     <td align="center">Daftar karyawan</td>

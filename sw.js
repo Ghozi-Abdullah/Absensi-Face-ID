@@ -1,27 +1,27 @@
 // Service worker: simpan aplikasi + model wajah supaya layar absen tetap jalan saat internet putus.
-const CACHE = 'hadir-v1';
+const CACHE = 'hadir-v2';
 const ASSETS = [
   './',
   './index.html',
-  './css/style.css',
-  './js/app.js',
-  './js/db.js',
-  './js/face.js',
-  './js/logic.js',
-  './js/sheets.js',
-  './vendor/face-api/face-api.esm.js',
-  './vendor/face-api/tfjs-backend-wasm.wasm',
-  './vendor/face-api/tfjs-backend-wasm-simd.wasm',
-  './models/tiny_face_detector_model-weights_manifest.json',
-  './models/tiny_face_detector_model.bin',
-  './models/face_landmark_68_model-weights_manifest.json',
-  './models/face_landmark_68_model.bin',
-  './models/face_recognition_model-weights_manifest.json',
-  './models/face_recognition_model.bin',
+  './style.css',
+  './app.js',
+  './db.js',
+  './face.js',
+  './logic.js',
+  './sheets.js',
+  './face-api.esm.js',
+  './tfjs-backend-wasm.wasm',
+  './tfjs-backend-wasm-simd.wasm',
+  './tiny_face_detector_model-weights_manifest.json',
+  './tiny_face_detector_model.bin',
+  './face_landmark_68_model-weights_manifest.json',
+  './face_landmark_68_model.bin',
+  './face_recognition_model-weights_manifest.json',
+  './face_recognition_model.bin',
   './manifest.webmanifest',
-  './icons/icon.svg',
-  './icons/icon-192.png',
-  './icons/icon-512.png'
+  './icon.svg',
+  './icon-192.png',
+  './icon-512.png'
 ];
 
 self.addEventListener('install', (event) => {

@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   decideAction, bestMatch, buildRows, summarize, toCSV, BlinkTracker, eyeAspectRatio, initials, confidence, dateKey
-} from '../js/logic.js';
+} from './logic.js';
 
 const settings = { jamMasuk: '08:00', toleransi: 10, jamPulang: '17:00', jedaMinimal: 60 };
 const at = (h, m, day = 12) => new Date(2026, 9, day, h, m, 0);

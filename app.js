@@ -2,7 +2,8 @@ import * as db from './db.js';
 import * as face from './face.js';
 import {
   DEFAULT_SETTINGS, dateKey, hhmm, formatTanggal, formatDurasi, sapaan, bestMatch, confidence,
-  decideAction, buildRows, summarize, toCSV, BlinkTracker, initials, uid, minutesOfDate, NAMA_BULAN
+  decideAction, buildRows, summarize, toCSV, BlinkTracker, initials, uid, minutesOfDate, NAMA_BULAN,
+  photoVerdict, maxPairDistance, shouldLearn, euclidean
 } from './logic.js';
 import { sendLog, sendTest } from './sheets.js';
 
@@ -175,7 +176,7 @@ async function startCamera() {
 
 async function loadModels() {
   try {
-    await face.loadModels('./models');
+    await face.loadModels('.');
     el.chip.classList.add('ready');
     el.chipText.textContent = 'Siap memindai';
     schedule(100);
@@ -296,7 +297,7 @@ async function kioskTick(video) {
     setResult('blink', `Halo ${firstName(person.name)}, kedipkan mata`, 'Kedip sekali dengan pelan untuk memastikan ini bukan foto.', BLINK_WINDOW_MS, person, true);
     return;
   }
-  await record(person, action, m.distance);
+  await record(person, action, m.distance, f.descriptor);
 }
 
 async function blinkTick(video) {
@@ -318,7 +319,7 @@ async function blinkTick(video) {
     if (check) {
       const m = bestMatch(check.descriptor, state.people, Number(state.settings.ambang));
       if (m.person && m.person.id === b.person.id) {
-        await record(b.person, b.action, m.distance);
+        await record(b.person, b.action, m.distance, check.descriptor);
         return;
       }
     }
@@ -327,7 +328,7 @@ async function blinkTick(video) {
   }
 }
 
-async function record(person, action, distance) {
+async function record(person, action, distance, liveDescriptor) {
   const now = new Date();
   const log = {
     id: uid(),
@@ -343,6 +344,13 @@ async function record(person, action, distance) {
     synced: false
   };
   await db.put('logs', log);
+  // Karyawan yang didaftarkan dari foto belajar dari wajah aslinya di kamera.
+  if (liveDescriptor && shouldLearn(person, distance, state.settings.ambang)) {
+    person.descriptors = [...person.descriptors, liveDescriptor];
+    person.liveSamples = (person.liveSamples || 0) + 1;
+    await db.put('people', person);
+    renderPeople();
+  }
   if (log.date === state.today) state.todayLogs.push(log);
   else await refreshToday();
   renderToday();
@@ -473,23 +481,27 @@ function renderPeople() {
   sel.innerHTML = '<option value="">Semua karyawan</option>' + [...state.people].sort((a, b) => a.name.localeCompare(b.name, 'id')).map((p) => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('');
   sel.value = current;
   if (!state.people.length) {
-    list.innerHTML = '<div class="empty-state"><b>Belum ada karyawan</b>Isi form di samping, lalu rekam 5 sampel wajah. Prosesnya sekitar 10 detik per orang.</div>';
+    list.innerHTML = '<div class="empty-state"><b>Belum ada karyawan</b>Daftarkan lewat kamera (5 sampel, sekitar 10 detik) atau dari 1–5 foto wajah.</div>';
     return;
   }
   list.innerHTML = [...state.people].sort((a, b) => a.name.localeCompare(b.name, 'id')).map((p) => {
     const d = new Date(p.createdAt);
-    const meta = [p.code, p.division, `${p.descriptors.length} sampel`, `didaftarkan ${d.getDate()} ${NAMA_BULAN[d.getMonth()].slice(0, 3)} ${d.getFullYear()}`].filter(Boolean).join(' · ');
+    const sampel = p.source === 'foto' ? `dari ${p.photoSamples || p.descriptors.length} foto + ${p.liveSamples || 0} sampel kamera` : `${p.descriptors.length} sampel kamera`;
+    const meta = [p.code, p.division, sampel, `didaftarkan ${d.getDate()} ${NAMA_BULAN[d.getMonth()].slice(0, 3)} ${d.getFullYear()}`].filter(Boolean).join(' · ');
     return `<div class="person"><span class="av">${esc(initials(p.name))}</span><div class="info"><b>${esc(p.name)}</b><span>${esc(meta)}</span></div><div class="acts"><button class="icon-btn" type="button" data-del="${esc(p.id)}" aria-label="Hapus ${esc(p.name)}"><svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></button></div></div>`;
   }).join('');
 }
 
 function bindEnroll() {
+  document.querySelectorAll('.seg-btn').forEach((b) => b.addEventListener('click', () => setEnrollMode(b.dataset.mode)));
+  bindPhotoInput();
   $('enroll-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const nama = $('en-nama').value.trim();
     if (!nama) return;
     if (!$('en-setuju').checked) { toast('Centang persetujuan karyawan terlebih dulu.'); return; }
     unlockAudio();
+    if (state.enrollMode === 'foto') { await saveFromPhotos(); return; }
     if (!(await startCamera())) { toast('Kamera belum bisa dipakai. Cek izin kamera.'); return; }
     if (!face.isReady()) { toast('Model wajah masih dimuat. Tunggu sebentar.'); return; }
     state.enroll = { name: nama, code: $('en-kode').value.trim(), division: $('en-divisi').value.trim(), samples: [], lastAt: 0 };
@@ -514,6 +526,202 @@ function bindEnroll() {
     renderToday();
     toast(`${p.name} dihapus.`);
   });
+}
+
+// ---------------- Daftar dari foto ----------------
+
+const MAX_PHOTOS = 5;
+
+function setEnrollMode(mode) {
+  if (state.mode === 'enroll') cancelEnroll();
+  state.enrollMode = mode;
+  document.querySelectorAll('.seg-btn').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === mode)));
+  $('photo-zone').hidden = mode !== 'foto';
+  updatePhotoUI();
+}
+
+function bindPhotoInput() {
+  state.enrollMode = 'kamera';
+  state.photos = [];
+  const input = $('en-foto');
+  const drop = $('drop');
+  input.addEventListener('change', () => { addPhotos([...input.files]); input.value = ''; });
+  ['dragenter', 'dragover'].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove('over'); }));
+  drop.addEventListener('drop', (e) => addPhotos([...e.dataTransfer.files].filter((f) => f.type.startsWith('image/'))));
+  $('photo-thumbs').addEventListener('click', (e) => {
+    const x = e.target.closest('[data-rm]');
+    if (!x) return;
+    state.photos = state.photos.filter((p) => p.key !== x.dataset.rm);
+    updatePhotoUI();
+  });
+}
+
+async function addPhotos(files) {
+  if (!files.length) return;
+  if (!face.isReady()) { toast('Model wajah masih dimuat. Tunggu sebentar lalu pilih foto lagi.'); return; }
+  const room = MAX_PHOTOS - state.photos.length;
+  if (room <= 0) { toast(`Maksimal ${MAX_PHOTOS} foto per karyawan.`); return; }
+  if (files.length > room) toast(`Hanya ${room} foto pertama yang dipakai (maksimal ${MAX_PHOTOS}).`);
+  const batch = files.slice(0, room).map((file) => ({ key: uid(), name: file.name, file, status: 'loading', pesan: 'Membaca wajah…' }));
+  state.photos.push(...batch);
+  updatePhotoUI();
+  for (const item of batch) {
+    try {
+      Object.assign(item, await analyzePhoto(item.file));
+    } catch (err) {
+      console.error(err);
+      Object.assign(item, { status: 'error', pesan: 'File gambar tidak bisa dibaca' });
+    }
+    updatePhotoUI();
+  }
+}
+
+// Baca foto, kecilkan bila terlalu besar, cari wajah, buat potongan kecil untuk pratinjau.
+async function analyzePhoto(file) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = new Image();
+    img.src = url;
+    await img.decode();
+    // Kecilkan foto besar, lalu beri bingkai abu-abu di sekelilingnya supaya wajah
+    // yang memenuhi pas foto tetap terbaca detektor.
+    const scale = Math.min(1, 1400 / Math.max(img.naturalWidth, img.naturalHeight));
+    const w = Math.round(img.naturalWidth * scale);
+    const h = Math.round(img.naturalHeight * scale);
+    const border = Math.round(Math.max(w, h) * 0.2);
+    const canvas = document.createElement('canvas');
+    canvas.width = w + border * 2;
+    canvas.height = h + border * 2;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#808080';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, border, border, w, h);
+    const faces = await face.readFacesFromImage(canvas);
+    const v = photoVerdict(faces);
+    const out = { status: v.warn ? 'warn' : v.status === 'ok' ? 'ok' : 'bad', pesan: v.pesan, descriptor: null, thumb: null, cands: [] };
+    const cropFace = ({ x, y, width, height }) => {
+      const pad = width * 0.35;
+      const side = Math.max(width, height) + pad * 2;
+      const c = document.createElement('canvas');
+      c.width = c.height = 160;
+      c.getContext('2d').drawImage(canvas, x + width / 2 - side / 2, y + height / 2 - side / 2, side, side, 0, 0, 160, 160);
+      return c.toDataURL('image/jpeg', 0.8);
+    };
+    const target = v.face;
+    if (target) {
+      out.thumb = cropFace(target.box);
+      if (v.status === 'ok') out.descriptor = target.descriptor;
+      // Foto rombongan: simpan semua wajah yang cukup besar, nanti dipilih yang paling mirip foto lain.
+      if (v.warn) {
+        out.largest = { descriptor: target.descriptor, thumb: out.thumb };
+        out.cands = faces.filter((f) => f.box.width >= 70).slice(0, 8).map((f) => ({ descriptor: f.descriptor, thumb: cropFace(f.box) }));
+        out.faceCount = faces.length;
+      }
+    } else {
+      const c = document.createElement('canvas');
+      const s = 160 / Math.max(canvas.width, canvas.height);
+      c.width = Math.round(canvas.width * s); c.height = Math.round(canvas.height * s);
+      c.getContext('2d').drawImage(canvas, 0, 0, c.width, c.height);
+      out.thumb = c.toDataURL('image/jpeg', 0.7);
+    }
+    return out;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+function usablePhotos() {
+  return state.photos.filter((p) => p.descriptor);
+}
+
+// Untuk foto berisi banyak wajah: bila ada foto lain yang hanya berisi satu wajah,
+// pilih wajah yang paling mirip dengan foto-foto itu, bukan sekadar yang terbesar.
+function resolveGroupPhotos() {
+  const refs = state.photos.filter((p) => p.descriptor && !(p.cands && p.cands.length > 1)).map((p) => p.descriptor);
+  for (const p of state.photos) {
+    if (!p.cands || p.cands.length < 2) continue;
+    if (!refs.length) {
+      p.descriptor = p.largest.descriptor;
+      p.thumb = p.largest.thumb;
+      p.status = 'warn';
+      p.pesan = `${p.faceCount} wajah, dipakai yang terbesar`;
+      continue;
+    }
+    let best = null;
+    let bestScore = Infinity;
+    for (const c of p.cands) {
+      const score = refs.reduce((a, r) => a + euclidean(c.descriptor, r), 0) / refs.length;
+      if (score < bestScore) { bestScore = score; best = c; }
+    }
+    if (bestScore > 0.6) {
+      p.descriptor = null;
+      p.status = 'bad';
+      p.pesan = 'Tidak ada wajah yang cocok dengan foto lain';
+    } else {
+      p.descriptor = best.descriptor;
+      p.thumb = best.thumb;
+      p.status = 'ok';
+      p.pesan = `${p.faceCount} wajah, dipilih yang cocok dengan foto lain`;
+    }
+  }
+}
+
+function updatePhotoUI() {
+  const btn = $('btn-enroll');
+  if (state.enrollMode !== 'foto') {
+    btn.textContent = 'Mulai rekam wajah';
+    btn.disabled = false;
+    return;
+  }
+  resolveGroupPhotos();
+  $('photo-thumbs').innerHTML = state.photos.map((p) => {
+    const cls = p.status === 'loading' ? '' : p.status;
+    const pic = p.thumb ? `<img src="${p.thumb}" alt="">` : '<div class="ph"><span class="spinner"></span></div>';
+    return `<div class="thumb ${cls}">${pic}<small>${esc(p.pesan)}</small><button type="button" class="x" data-rm="${p.key}" aria-label="Hapus foto ${esc(p.name)}">×</button></div>`;
+  }).join('');
+  const ok = usablePhotos();
+  const loading = state.photos.some((p) => p.status === 'loading');
+  const note = $('photo-note');
+  note.classList.remove('warn');
+  if (!state.photos.length) note.textContent = 'Satu foto sudah cukup. Dua sampai tiga foto dari waktu berbeda membuat pengenalan lebih akurat.';
+  else if (loading) note.textContent = 'Sedang membaca wajah di foto…';
+  else if (!ok.length) note.textContent = 'Belum ada foto yang bisa dipakai. Pilih foto wajah yang lebih jelas.';
+  else if (ok.length > 1 && maxPairDistance(ok.map((p) => p.descriptor)) > 0.6) {
+    note.textContent = 'Foto-foto ini sepertinya bukan orang yang sama. Periksa lagi sebelum menyimpan.';
+    note.classList.add('warn');
+  } else note.textContent = `${ok.length} foto siap dipakai. Setelah absen pertama lewat kamera, wajah aslinya ikut dipelajari supaya makin akurat.`;
+  btn.textContent = ok.length ? `Simpan dari ${ok.length} foto` : 'Simpan dari foto';
+  btn.disabled = loading || !ok.length;
+}
+
+async function saveFromPhotos() {
+  const ok = usablePhotos();
+  if (!ok.length) { toast('Pilih minimal satu foto dengan wajah yang terdeteksi.'); return; }
+  const descriptors = ok.map((p) => p.descriptor);
+  if (descriptors.length > 1 && maxPairDistance(descriptors) > 0.6) {
+    const lanjut = await ask({ title: 'Foto dari orang yang sama?', body: 'Wajah di foto-foto ini cukup berbeda satu sama lain. Simpan tetap sebagai satu karyawan?', okText: 'Tetap simpan' });
+    if (!lanjut) return;
+  }
+  const mirip = descriptors.map((s) => bestMatch(s, state.people, Number(state.settings.ambang))).find((m) => m.person);
+  if (mirip) {
+    const lanjut = await ask({ title: 'Wajah ini sudah terdaftar?', body: `Wajah di foto mirip dengan ${mirip.person.name}. Simpan tetap sebagai orang baru?`, okText: 'Tetap simpan' });
+    if (!lanjut) return;
+  }
+  const nama = $('en-nama').value.trim();
+  const person = {
+    id: uid(), name: nama, code: $('en-kode').value.trim(), division: $('en-divisi').value.trim(),
+    descriptors, source: 'foto', photoSamples: descriptors.length, liveSamples: 0, createdAt: new Date().toISOString()
+  };
+  await db.put('people', person);
+  state.people.push(person);
+  state.photos = [];
+  $('enroll-form').reset();
+  updatePhotoUI();
+  renderPeople();
+  renderToday();
+  feedback(`${nama} terdaftar`);
+  toast(`${nama} terdaftar dari ${descriptors.length} foto. Silakan absen lewat kamera.`);
 }
 
 function cancelEnroll() {

@@ -1,14 +1,14 @@
 // Pembungkus face-api: memuat model, membaca wajah, dan menghitung EAR mata.
-import * as faceapi from '../vendor/face-api/face-api.esm.js';
+import * as faceapi from './face-api.esm.js';
 import { eyeAspectRatio } from './logic.js';
 
 let ready = false;
 let options = null;
 
-export async function loadModels(base = './models') {
+export async function loadModels(base = '.') {
   if (ready) return;
   // WebGL paling cepat; WASM untuk perangkat tanpa WebGL; CPU sebagai jalan terakhir.
-  if (faceapi.tf.setWasmPaths) faceapi.tf.setWasmPaths(new URL('../vendor/face-api/', import.meta.url).href);
+  if (faceapi.tf.setWasmPaths) faceapi.tf.setWasmPaths(new URL('./', import.meta.url).href);
   for (const name of ['webgl', 'wasm', 'cpu']) {
     try {
       if (await faceapi.tf.setBackend(name)) break;
@@ -45,6 +45,24 @@ export async function readLandmarks(video) {
   const r = await faceapi.detectSingleFace(video, options).withFaceLandmarks();
   if (!r) return null;
   return pack(r, video);
+}
+
+// Semua wajah di sebuah foto (img/canvas). Dipakai untuk pendaftaran dari foto.
+// inputSize lebih besar supaya wajah kecil di pas foto atau foto KTP tetap terbaca.
+// Beberapa ukuran dicoba bergantian: ukuran besar untuk wajah kecil (foto rombongan),
+// ukuran kecil untuk wajah yang memenuhi bingkai (pas foto).
+export async function readFacesFromImage(source) {
+  let res = [];
+  for (const inputSize of [416, 608, 320, 224]) {
+    const opts = new faceapi.TinyFaceDetectorOptions({ inputSize, scoreThreshold: 0.4 });
+    res = await faceapi.detectAllFaces(source, opts).withFaceLandmarks().withFaceDescriptors();
+    if (res.length) break;
+  }
+  return res.map((r) => ({
+    box: { x: r.detection.box.x, y: r.detection.box.y, width: r.detection.box.width, height: r.detection.box.height },
+    score: r.detection.score,
+    descriptor: Array.from(r.descriptor)
+  }));
 }
 
 function pack(r, video) {

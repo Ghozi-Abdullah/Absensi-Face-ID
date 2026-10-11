@@ -82,6 +82,38 @@ export function bestMatch(descriptor, people, ambang = 0.5) {
   return { person: null, distance: bestDist };
 }
 
+// ---------- Pendaftaran dari foto ----------
+
+export const MAX_SAMPLES = 8;
+
+// Jarak terbesar antar-foto. Di atas ~0,6 biasanya foto-foto itu bukan orang yang sama.
+export function maxPairDistance(descriptors) {
+  let max = 0;
+  for (let i = 0; i < descriptors.length; i++) {
+    for (let j = i + 1; j < descriptors.length; j++) {
+      max = Math.max(max, euclidean(descriptors[i], descriptors[j]));
+    }
+  }
+  return max;
+}
+
+// Karyawan yang didaftarkan dari foto "belajar" dari wajah aslinya di kamera:
+// sampel kamera ditambahkan hanya bila cocoknya meyakinkan, sampai MAX_SAMPLES.
+export function shouldLearn(person, distance, ambang, max = MAX_SAMPLES) {
+  if (!person || person.source !== 'foto') return false;
+  if ((person.descriptors || []).length >= max) return false;
+  return distance <= Number(ambang) - 0.05;
+}
+
+// Status satu foto berdasarkan wajah yang ditemukan di dalamnya.
+export function photoVerdict(faces, minFacePx = 70) {
+  if (!faces.length) return { status: 'none', pesan: 'Wajah tidak terdeteksi' };
+  const largest = faces.reduce((a, b) => (b.box.width * b.box.height > a.box.width * a.box.height ? b : a));
+  if (largest.box.width < minFacePx) return { status: 'small', pesan: 'Wajah terlalu kecil, pakai foto yang lebih dekat', face: largest };
+  if (faces.length > 1) return { status: 'ok', pesan: `${faces.length} wajah, dipakai yang terbesar`, face: largest, warn: true };
+  return { status: 'ok', pesan: 'Wajah terdeteksi', face: largest };
+}
+
 // Skor keyakinan 0-100 dari jarak, untuk ditampilkan ke pengguna.
 export function confidence(distance, ambang = 0.5) {
   if (!isFinite(distance)) return 0;

@@ -1,4 +1,4 @@
-// Kirim log absensi ke Google Sheets lewat Google Apps Script (lihat apps-script/Code.gs).
+// Kirim log absensi ke Google Sheets lewat Google Apps Script (lihat Code.gs).
 // Yang dikirim hanya nama, ID, waktu, dan status. Data wajah tetap di perangkat.
 
 export async function sendLog(url, log, tempat) {
