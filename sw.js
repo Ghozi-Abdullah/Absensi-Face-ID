@@ -1,5 +1,5 @@
 // Service worker: simpan aplikasi + model wajah supaya layar absen tetap jalan saat internet putus.
-const CACHE = 'hadir-v2';
+const CACHE = 'hadir-v6';
 const ASSETS = [
   './',
   './index.html',
@@ -7,6 +7,8 @@ const ASSETS = [
   './app.js',
   './db.js',
   './face.js',
+  './glasses.js',
+  './dicebear.js',
   './logic.js',
   './sheets.js',
   './face-api.esm.js',
@@ -21,7 +23,8 @@ const ASSETS = [
   './manifest.webmanifest',
   './icon.svg',
   './icon-192.png',
-  './icon-512.png'
+  './icon-512.png',
+  './google-sans-flex.woff2'
 ];
 
 self.addEventListener('install', (event) => {

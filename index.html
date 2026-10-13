@@ -5,194 +5,218 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Hadir · Absensi Wajah</title>
   <meta name="description" content="Absensi karyawan dengan pengenalan wajah di browser. Data wajah tersimpan di perangkat, rekap bisa diekspor ke CSV atau Google Sheets.">
-  <meta name="theme-color" content="#151935">
+  <meta name="theme-color" content="#F4F4F2">
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="./icon-192.png">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+  <link rel="preload" href="./google-sans-flex.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="./style.css">
 </head>
 <body>
-  <header class="bar">
+  <header class="top">
     <div class="brand">
-      <svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9" fill="currentColor"/><path d="M9 12V9.5A.5.5 0 0 1 9.5 9H12M20 9h2.5a.5.5 0 0 1 .5.5V12M23 20v2.5a.5.5 0 0 1-.5.5H20M12 23H9.5a.5.5 0 0 1-.5-.5V20" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/><path d="m12.5 16.5 2.4 2.4 4.8-5.3" stroke="#fff" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <div class="brand-text"><strong>Hadir</strong><span id="place-name">Kantor Saya</span></div>
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M6 9.5V7.5A1.5 1.5 0 0 1 7.5 6h2M14.5 6h2A1.5 1.5 0 0 1 18 7.5v2M18 14.5v2a1.5 1.5 0 0 1-1.5 1.5h-2M9.5 18h-2A1.5 1.5 0 0 1 6 16.5v-2"/><path d="m9.4 12.3 1.9 1.9 3.5-3.8"/></svg>
+      </span>
+      <span class="brand-text"><b>Hadir</b><span id="place-name">Kantor Saya</span></span>
     </div>
-    <nav class="tabs" aria-label="Menu utama">
-      <button class="tab" type="button" data-view="absen" aria-current="page">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16"/><circle cx="12" cy="11" r="3"/><path d="M7.5 17a5 5 0 0 1 9 0"/></svg>
-        <span>Absen</span>
-      </button>
-      <button class="tab" type="button" data-view="karyawan">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8.5" r="3.5"/><path d="M2.5 19.5a6.5 6.5 0 0 1 13 0"/><path d="M16 5.5a3.2 3.2 0 0 1 0 6.2M18 14.2a6 6 0 0 1 3.5 5.3"/></svg>
-        <span>Karyawan</span>
-      </button>
-      <button class="tab" type="button" data-view="rekap">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2.5"/><path d="M8 15v-3M12 15V9M16 15v-5"/></svg>
-        <span>Rekap</span>
-      </button>
-      <button class="tab" type="button" data-view="pengaturan">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>
-        <span>Pengaturan</span>
-      </button>
-    </nav>
+    <h1 class="sr-only" id="page-title">Absen</h1>
+    <div class="top-right">
+      <span class="glass-pill" id="top-date">&nbsp;</span>
+    </div>
   </header>
 
-  <main>
+  <main class="main">
     <!-- ABSEN -->
-    <section class="view" id="view-absen" data-view="absen" aria-label="Absen">
-      <div class="kiosk">
-        <div class="cam" id="cam-absen">
-          <video id="video-absen" playsinline muted></video>
-          <canvas id="overlay-absen" class="overlay"></canvas>
-          <div class="brackets" aria-hidden="true"></div>
-          <div class="cam-chip" id="model-chip"><span class="spinner" aria-hidden="true"></span><span id="model-chip-text">Memuat model wajah</span></div>
-          <div class="cam-msg" id="cam-msg">
-            <p id="cam-msg-text">Kamera belum menyala. Izinkan akses kamera saat diminta browser.</p>
-            <button class="btn primary" type="button" id="btn-start-cam">Nyalakan kamera</button>
+    <section class="view view-absen" data-view="absen" aria-label="Absen">
+      <div class="cam" id="cam-absen">
+        <video id="video-absen" playsinline muted></video>
+        <canvas id="overlay-absen" class="overlay"></canvas>
+        <div class="cam-status" id="model-chip"><span class="cam-dot" aria-hidden="true"></span><span id="model-chip-text">Memuat model wajah</span></div>
+        <div class="cam-msg" id="cam-msg">
+          <p id="cam-msg-text">Kamera belum menyala. Izinkan akses kamera saat diminta browser.</p>
+          <button class="btn dark" type="button" id="btn-start-cam">Nyalakan kamera</button>
+        </div>
+        <div class="result" id="result" data-state="idle" aria-live="polite">
+          <div class="result-av" id="result-avatar" aria-hidden="true"></div>
+          <div class="result-tx">
+            <p class="result-title" id="result-title">Hadapkan wajah ke kamera</p>
+            <p class="result-line"><span class="result-chip" id="result-chip" hidden></span><span class="result-sub" id="result-sub">Jarak sekitar 50 cm, wajah terlihat jelas.</span></p>
           </div>
+          <div class="result-time" id="result-time"></div>
+          <div class="result-bar" aria-hidden="true"><span id="result-progress"></span></div>
+        </div>
+      </div>
+
+      <aside class="side">
+        <div class="card clock">
+          <p class="clock-date" id="clock-date">&nbsp;</p>
+          <div class="clock-time"><span id="clock-hm">--.--</span><span class="clock-s" id="clock-s">--</span></div>
+          <div class="rule-chips" id="clock-rule"></div>
         </div>
 
-        <aside class="side">
-          <div class="clock">
-            <div class="clock-time" id="clock-time">--:--:--</div>
-            <div class="clock-date" id="clock-date">&nbsp;</div>
-            <div class="clock-rule" id="clock-rule">Masuk 08:00 · toleransi 10 menit · pulang 17:00</div>
+        <div class="today">
+          <div class="today-head">
+            <p class="today-label">Hari ini</p>
+            <p class="today-big"><span id="today-big">0/0</span> <span class="today-unit">hadir</span></p>
           </div>
-
-          <div class="result" id="result" data-state="idle" aria-live="polite">
-            <div class="result-avatar" id="result-avatar" aria-hidden="true">
-              <svg viewBox="0 0 24 24"><circle cx="12" cy="9" r="4"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg>
-            </div>
-            <div class="result-text">
-              <p class="result-title" id="result-title">Hadapkan wajah ke kamera</p>
-              <p class="result-sub" id="result-sub">Jarak sekitar 50 cm, wajah terlihat jelas tanpa masker.</p>
-            </div>
-            <div class="result-progress" aria-hidden="true"><span id="result-progress"></span></div>
+          <div class="filter-chips" id="roster-filter" role="group" aria-label="Saring daftar hadir"></div>
+          <div class="roster">
+            <div class="roster-cols" aria-hidden="true"><span>Nama</span><span>Masuk</span><span>Pulang</span></div>
+            <ol class="roster-list" id="feed"></ol>
           </div>
-
-          <div class="today">
-            <div class="today-head">
-              <h2>Hari ini</h2>
-              <span id="today-count">0 dari 0 hadir</span>
-            </div>
-            <div class="today-stats">
-              <div><b id="st-tepat">0</b><span>tepat waktu</span></div>
-              <div><b id="st-telat">0</b><span>terlambat</span></div>
-              <div><b id="st-pulang">0</b><span>sudah pulang</span></div>
-            </div>
-            <ol class="feed" id="feed"></ol>
-          </div>
-        </aside>
-      </div>
+        </div>
+      </aside>
     </section>
 
     <!-- KARYAWAN -->
-    <section class="view" id="view-karyawan" data-view="karyawan" aria-label="Karyawan" hidden>
-      <div class="split">
-        <div class="panel">
-          <div class="panel-head">
-            <h2>Karyawan terdaftar</h2>
-            <span class="muted" id="people-count">0 orang</span>
-          </div>
-          <div class="people" id="people-list"></div>
+    <section class="view view-karyawan" data-view="karyawan" aria-label="Karyawan" hidden>
+      <div class="card people-card">
+        <div class="card-title-row">
+          <h2 class="display">Karyawan</h2>
+          <span class="count-pill" id="people-count">0 orang</span>
         </div>
+        <label class="search" for="people-search">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="m20 20-4.2-4.2"/></svg>
+          <input id="people-search" type="search" placeholder="Cari nama, ID, atau divisi" autocomplete="off">
+        </label>
+        <div class="filter-chips" id="people-filter" role="group" aria-label="Saring per divisi"></div>
+        <div class="people" id="people-list"></div>
+      </div>
 
-        <div class="panel">
-          <div class="panel-head"><h2>Tambah karyawan</h2></div>
+      <div class="card enroll-card">
+        <h2 class="display" id="enroll-title">Tambah karyawan</h2>
+
+        <form id="enroll-form" class="form" autocomplete="off">
           <div class="seg" role="group" aria-label="Cara mendaftar wajah">
-            <button type="button" class="seg-btn" data-mode="kamera" aria-pressed="true">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8.5A2.5 2.5 0 0 1 5.5 6H7l1.5-2h7L17 6h1.5A2.5 2.5 0 0 1 21 8.5v9a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/><circle cx="12" cy="13" r="3.5"/></svg>
-              Rekam dari kamera
-            </button>
-            <button type="button" class="seg-btn" data-mode="foto" aria-pressed="false">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5"/><circle cx="9" cy="10" r="2"/><path d="m3.5 18 5-5 3.5 3.5 2.5-2.5 6 6"/></svg>
-              Dari foto
-            </button>
+            <button type="button" class="seg-btn" data-mode="kamera" aria-pressed="true">Rekam dari kamera</button>
+            <button type="button" class="seg-btn" data-mode="foto" aria-pressed="false">Dari foto</button>
           </div>
-          <form id="enroll-form" class="form" autocomplete="off">
+          <div class="field">
+            <label for="en-nama">Nama lengkap</label>
+            <input id="en-nama" name="nama" required maxlength="60" placeholder="Nama sesuai KTP">
+          </div>
+          <div class="field">
+            <span class="lbl" id="en-gender-label">Jenis kelamin</span>
+            <div class="chips gender-chips" role="radiogroup" aria-labelledby="en-gender-label">
+              <label class="chip"><input type="radio" name="en-gender" value="L"><span>Laki-laki</span></label>
+              <label class="chip"><input type="radio" name="en-gender" value="P"><span>Perempuan</span></label>
+              <label class="chip" id="en-hijab-wrap" hidden><input type="checkbox" id="en-hijab"><span>Berhijab</span></label>
+            </div>
+          </div>
+          <div class="field-row">
             <div class="field">
-              <label for="en-nama">Nama lengkap</label>
-              <input id="en-nama" name="nama" required maxlength="60" placeholder="contoh: Rina Kartika">
+              <label for="en-kode">ID karyawan</label>
+              <input id="en-kode" name="kode" maxlength="20" placeholder="Contoh: KRY-014">
             </div>
-            <div class="field-row">
-              <div class="field">
-                <label for="en-kode">ID karyawan</label>
-                <input id="en-kode" name="kode" maxlength="20" placeholder="contoh: KRY-014">
-              </div>
-              <div class="field">
-                <label for="en-divisi">Divisi</label>
-                <input id="en-divisi" name="divisi" maxlength="30" placeholder="contoh: Dapur" list="divisi-list">
-                <datalist id="divisi-list"></datalist>
-              </div>
+            <div class="field">
+              <label for="en-divisi">Divisi</label>
+              <input id="en-divisi" name="divisi" maxlength="30" placeholder="Contoh: Dapur" list="divisi-list">
+              <datalist id="divisi-list"></datalist>
             </div>
-            <label class="check">
-              <input type="checkbox" id="en-setuju" required>
-              <span>Karyawan ini sudah memberi persetujuan data wajahnya diproses untuk absensi, sesuai UU No. 27 Tahun 2022 tentang Pelindungan Data Pribadi.</span>
-            </label>
-            <div class="photo-zone" id="photo-zone" hidden>
-              <label class="drop" for="en-foto" id="drop">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4M7.5 8.5 12 4l4.5 4.5"/><path d="M4 15v2.5A2.5 2.5 0 0 0 6.5 20h11a2.5 2.5 0 0 0 2.5-2.5V15"/></svg>
-                <b>Pilih atau seret 1–5 foto wajah</b>
-                <span>JPG atau PNG. Paling akurat: wajah menghadap depan, terang, tanpa masker dan kacamata hitam. Pas foto atau foto KTP bisa dipakai.</span>
-              </label>
-              <input type="file" id="en-foto" accept="image/*" multiple hidden>
-              <div class="thumbs" id="photo-thumbs"></div>
-              <p class="photo-note" id="photo-note"></p>
-            </div>
-            <button class="btn primary" type="submit" id="btn-enroll">Mulai rekam wajah</button>
-          </form>
+          </div>
 
-          <div class="enroll" id="enroll-stage" hidden>
-            <div class="cam cam-small">
-              <video id="video-enroll" playsinline muted></video>
-              <canvas id="overlay-enroll" class="overlay"></canvas>
-              <div class="brackets" aria-hidden="true"></div>
+          <div class="photo-zone" id="photo-zone" hidden>
+            <label class="drop" for="en-foto" id="drop">
+              <span class="drop-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 15V5M8 9l4-4 4 4"/><path d="M5 15v2.5A1.5 1.5 0 0 0 6.5 19h11a1.5 1.5 0 0 0 1.5-1.5V15"/></svg></span>
+              <b>Pilih atau seret 1–5 foto wajah</b>
+              <span>Pas foto, foto KTP, atau foto biasa. Wajah menghadap depan dan terang.</span>
+            </label>
+            <input type="file" id="en-foto" accept="image/*" multiple hidden>
+            <div class="thumbs" id="photo-thumbs"></div>
+            <p class="note" id="photo-note"></p>
+          </div>
+
+          <label class="check">
+            <input type="checkbox" id="en-setuju" required>
+            <span>Karyawan sudah setuju data wajahnya dipakai untuk absensi, sesuai UU No. 27 Tahun 2022 tentang Pelindungan Data Pribadi.</span>
+          </label>
+
+          <div class="dark-foot">
+            <span class="av foot-av" aria-hidden="true"><img id="foot-av" alt=""></span>
+            <div class="dark-foot-tx">
+              <b id="foot-name">Karyawan baru</b>
+              <span id="foot-sub">Rekam 5 sampel wajah, sekitar 10 detik</span>
             </div>
-            <div class="enroll-side">
-              <p class="enroll-step" id="enroll-step">Sampel 1 dari 5</p>
-              <p class="enroll-instruction" id="enroll-instruction">Tatap lurus ke kamera</p>
-              <div class="dots" id="enroll-dots"><span></span><span></span><span></span><span></span><span></span></div>
-              <button class="btn ghost" type="button" id="btn-enroll-cancel">Batal</button>
-            </div>
+            <button class="round on-dark" type="button" id="btn-shuffle" title="Ganti ilustrasi" aria-label="Ganti ilustrasi">
+              <svg viewBox="0 0 24 24"><path d="M4 7h3.5c2.5 0 3.7 1.3 5 3.5l1 1.8c1.3 2.2 2.5 3.7 5 3.7H20M4 17h3.5c1.5 0 2.5-.6 3.4-1.6M13.1 8.6C14 7.6 15 7 16.5 7H20M17.5 4.5 20 7l-2.5 2.5M17.5 14.5 20 17l-2.5 2.5"/></svg>
+            </button>
+            <button class="btn light" type="submit" id="btn-enroll">Mulai rekam</button>
+          </div>
+        </form>
+
+        <div class="enroll" id="enroll-stage" hidden>
+          <div class="cam cam-small">
+            <video id="video-enroll" playsinline muted></video>
+            <canvas id="overlay-enroll" class="overlay"></canvas>
+          </div>
+          <div class="enroll-side">
+            <p class="enroll-step" id="enroll-step">Sampel 1 dari 5</p>
+            <p class="enroll-instruction" id="enroll-instruction">Tatap lurus ke kamera</p>
+            <div class="dots" id="enroll-dots"></div>
+            <p class="note" id="enroll-note"></p>
+            <div><button class="btn outline" type="button" id="btn-enroll-cancel">Batal</button></div>
           </div>
         </div>
       </div>
     </section>
 
     <!-- REKAP -->
-    <section class="view" id="view-rekap" data-view="rekap" aria-label="Rekap" hidden>
-      <div class="panel">
-        <div class="filters">
-          <div class="field">
-            <label for="rk-dari">Dari</label>
-            <input type="date" id="rk-dari">
-          </div>
-          <div class="field">
-            <label for="rk-sampai">Sampai</label>
-            <input type="date" id="rk-sampai">
-          </div>
-          <div class="field">
-            <label for="rk-orang">Karyawan</label>
-            <select id="rk-orang"><option value="">Semua karyawan</option></select>
-          </div>
-          <div class="filter-actions">
-            <button class="btn" type="button" id="btn-csv-ringkas">Ekspor ringkasan</button>
-            <button class="btn primary" type="button" id="btn-csv-log">Ekspor log CSV</button>
-          </div>
-        </div>
-        <div class="tiles">
-          <div class="tile"><span>Kehadiran</span><b id="tl-hadir">0</b><small id="tl-hadir-sub">orang-hari</small></div>
-          <div class="tile"><span>Terlambat</span><b id="tl-telat">0</b><small id="tl-telat-sub">0% dari kehadiran</small></div>
-          <div class="tile"><span>Rata-rata jam masuk</span><b id="tl-rata">-</b><small id="tl-rata-sub">semua karyawan</small></div>
-          <div class="tile"><span>Total jam kerja</span><b id="tl-jam">0</b><small>dari baris lengkap masuk dan pulang</small></div>
+    <section class="view view-rekap" data-view="rekap" aria-label="Rekap" hidden>
+      <div class="rekap-head">
+        <h2 class="display big" id="rekap-title">Rekap</h2>
+        <div class="toolbar">
+          <label class="pill-field"><span>Dari</span><input type="date" id="rk-dari"></label>
+          <label class="pill-field"><span>Sampai</span><input type="date" id="rk-sampai"></label>
+          <label class="pill-field"><span class="sr-only">Karyawan</span><select id="rk-orang"><option value="">Semua karyawan</option></select></label>
+          <button class="btn outline" type="button" id="btn-csv-ringkas">Unduh ringkasan</button>
+          <button class="btn dark" type="button" id="btn-csv-log">Unduh log</button>
         </div>
       </div>
 
-      <div class="panel">
-        <div class="panel-head"><h2>Ringkasan per karyawan</h2></div>
+      <div class="rekap-top">
+        <div class="card cal-card">
+          <div class="cal-head">
+            <div>
+              <p class="muted-sm">Kalender hadir</p>
+              <h3 class="cal-month" id="cal-month">Oktober 2026</h3>
+            </div>
+            <div class="cal-nav">
+              <button class="round" type="button" id="cal-prev" aria-label="Bulan sebelumnya"><svg viewBox="0 0 24 24"><path d="m14.5 6-6 6 6 6"/></svg></button>
+              <button class="round" type="button" id="cal-next" aria-label="Bulan berikutnya"><svg viewBox="0 0 24 24"><path d="m9.5 6 6 6-6 6"/></svg></button>
+            </div>
+          </div>
+          <div class="cal" id="cal"></div>
+          <div class="dark-foot">
+            <div class="dark-foot-tx"><b id="cal-foot-title">Semua tanggal</b><span id="cal-foot-sub">Pilih tanggal untuk melihat siapa saja yang hadir</span></div>
+            <button class="btn light" type="button" id="cal-clear" hidden>Lihat semua</button>
+          </div>
+        </div>
+
+        <div class="metrics">
+          <p class="metrics-label"><span>Periode</span><b id="metrics-period">—</b></p>
+          <div class="metric"><span class="metric-v" id="tl-hadir">0</span><span class="metric-l" id="tl-hadir-sub">kehadiran</span></div>
+          <div class="metric"><span class="metric-v late" id="tl-telat">0</span><span class="metric-l" id="tl-telat-sub">terlambat</span></div>
+          <div class="metric"><span class="metric-v" id="tl-rata">—</span><span class="metric-l">rata-rata jam masuk</span></div>
+          <div class="metric"><span class="metric-v" id="tl-jam">0</span><span class="metric-l">jam kerja tercatat</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title-row">
+          <h3 class="title">Lembar hadir</h3>
+          <div class="legend" aria-label="Keterangan">
+            <span><i class="mk mk-H">H</i>Hadir</span>
+            <span><i class="mk mk-T">T</i>Terlambat</span>
+            <span><i class="mk mk-A">A</i>Tidak hadir</span>
+            <span><i class="mk mk-L"></i>Libur</span>
+          </div>
+        </div>
+        <div class="sheet-wrap" id="sheet"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title-row"><h3 class="title">Ringkasan per karyawan</h3></div>
         <div class="table-wrap">
           <table class="table">
             <thead><tr><th>Nama</th><th>Divisi</th><th class="num">Hadir</th><th class="num">Terlambat</th><th class="num">Pulang awal</th><th class="num">Rata-rata masuk</th><th class="num">Total jam</th></tr></thead>
@@ -201,11 +225,11 @@
         </div>
       </div>
 
-      <div class="panel">
-        <div class="panel-head"><h2>Log harian</h2><span class="muted" id="log-count">0 baris</span></div>
+      <div class="card">
+        <div class="card-title-row"><h3 class="title" id="log-title">Log harian</h3><span class="count-pill" id="log-count">0 baris</span></div>
         <div class="table-wrap">
           <table class="table">
-            <thead><tr><th>Tanggal</th><th>Nama</th><th>Masuk</th><th>Pulang</th><th class="num">Durasi</th><th>Status</th></tr></thead>
+            <thead><tr><th>Tanggal</th><th>Nama</th><th class="num">Masuk</th><th class="num">Pulang</th><th class="num">Durasi</th><th>Keterangan</th></tr></thead>
             <tbody id="tb-log"></tbody>
           </table>
         </div>
@@ -213,90 +237,109 @@
     </section>
 
     <!-- PENGATURAN -->
-    <section class="view" id="view-pengaturan" data-view="pengaturan" aria-label="Pengaturan" hidden>
+    <section class="view view-pengaturan" data-view="pengaturan" aria-label="Pengaturan" hidden>
+      <h2 class="display big">Pengaturan</h2>
       <form id="settings-form" class="settings" autocomplete="off">
-        <div class="panel">
-          <div class="panel-head"><h2>Tempat dan jam kerja</h2></div>
-          <div class="form">
-            <div class="field">
-              <label for="set-tempat">Nama tempat</label>
-              <input id="set-tempat" name="namaTempat" maxlength="40">
-            </div>
-            <div class="field-row three">
-              <div class="field"><label for="set-masuk">Jam masuk</label><input type="time" id="set-masuk" name="jamMasuk"></div>
-              <div class="field"><label for="set-toleransi">Toleransi (menit)</label><input type="number" id="set-toleransi" name="toleransi" min="0" max="120"></div>
-              <div class="field"><label for="set-pulang">Jam pulang</label><input type="time" id="set-pulang" name="jamPulang"></div>
-            </div>
-            <div class="field">
-              <label for="set-jeda">Jeda minimal masuk ke pulang (menit)</label>
-              <input type="number" id="set-jeda" name="jedaMinimal" min="5" max="720">
-              <small>Wajah yang terdeteksi lagi sebelum jeda ini tidak dicatat sebagai pulang.</small>
-            </div>
+        <section class="card set-group">
+          <h3 class="title">Tempat dan jam kerja</h3>
+          <div class="set-row">
+            <div class="set-label"><label for="set-tempat">Nama tempat</label><small>Tampil di bilah atas dan nama file ekspor.</small></div>
+            <div class="set-ctrl"><input id="set-tempat" name="namaTempat" maxlength="40"></div>
           </div>
-        </div>
+          <div class="set-row">
+            <div class="set-label"><label for="set-masuk">Jam masuk</label><small>Dasar perhitungan keterlambatan.</small></div>
+            <div class="set-ctrl"><input type="time" id="set-masuk" name="jamMasuk"></div>
+          </div>
+          <div class="set-row">
+            <div class="set-label"><label for="set-toleransi">Toleransi terlambat</label><small>Absen setelah jam masuk + toleransi dihitung terlambat.</small></div>
+            <div class="set-ctrl"><span class="unit-wrap"><input type="number" id="set-toleransi" name="toleransi" min="0" max="120"><span class="unit">menit</span></span></div>
+          </div>
+          <div class="set-row">
+            <div class="set-label"><label for="set-pulang">Jam pulang</label><small>Absen pulang sebelum jam ini ditandai pulang awal.</small></div>
+            <div class="set-ctrl"><input type="time" id="set-pulang" name="jamPulang"></div>
+          </div>
+          <div class="set-row">
+            <div class="set-label"><label for="set-jeda">Jeda masuk ke pulang</label><small>Wajah yang terdeteksi lagi sebelum jeda ini tidak dicatat sebagai pulang.</small></div>
+            <div class="set-ctrl"><span class="unit-wrap"><input type="number" id="set-jeda" name="jedaMinimal" min="5" max="720"><span class="unit">menit</span></span></div>
+          </div>
+          <div class="set-row">
+            <div class="set-label"><span class="lbl" id="libur-label">Hari libur</span><small>Tidak dihitung sebagai tidak hadir.</small></div>
+            <div class="set-ctrl chips" role="group" aria-labelledby="libur-label" id="libur-chips"></div>
+          </div>
+        </section>
 
-        <div class="panel">
-          <div class="panel-head"><h2>Pengenalan wajah</h2></div>
-          <div class="form">
-            <div class="field">
-              <label for="set-ambang">Ketelitian pencocokan: <output id="ambang-out">0,50</output></label>
-              <input type="range" id="set-ambang" name="ambang" min="0.35" max="0.6" step="0.01">
-              <small>Geser ke kiri untuk lebih ketat (lebih aman, kadang perlu mencoba dua kali). Bawaan 0,50.</small>
-            </div>
-            <label class="switch">
-              <input type="checkbox" id="set-kedip" name="wajibKedip">
-              <span><b>Wajib kedip sebelum tercatat</b><small>Mencegah absen memakai foto di layar HP.</small></span>
-            </label>
-            <div class="field">
-              <label for="set-suara">Suara saat berhasil</label>
+        <section class="card set-group">
+          <h3 class="title">Pengenalan wajah</h3>
+          <div class="set-row">
+            <div class="set-label"><label for="set-ambang">Ketelitian</label><small>Geser ke kiri bila karyawan sering tertukar, ke kanan bila sering tidak dikenali. Bawaan 0,50.</small></div>
+            <div class="set-ctrl range"><input type="range" id="set-ambang" name="ambang" min="0.38" max="0.6" step="0.01"><output id="ambang-out">0,50</output></div>
+          </div>
+          <div class="set-row">
+            <div class="set-label"><label for="set-suara">Suara saat berhasil</label><small>Perlu satu ketukan di layar setelah halaman dibuka.</small></div>
+            <div class="set-ctrl">
               <select id="set-suara" name="suara">
                 <option value="mati">Tanpa suara</option>
                 <option value="bip">Bunyi bip</option>
-                <option value="sapaan">Sapaan suara ("Selamat pagi, Rina")</option>
+                <option value="sapaan">Sapaan suara</option>
               </select>
             </div>
           </div>
-        </div>
+        </section>
 
-        <div class="panel">
-          <div class="panel-head"><h2>Sinkron ke Google Sheets</h2></div>
-          <div class="form">
-            <div class="field">
-              <label for="set-sheets">URL Web App Apps Script</label>
-              <input id="set-sheets" name="sheetsUrl" type="url" placeholder="https://script.google.com/macros/s/.../exec">
-              <small>Setiap absen dikirim sebagai satu baris berisi nama, ID, waktu, dan status. Cara membuatnya ada di README repo.</small>
-            </div>
-            <div class="row-actions">
-              <button class="btn" type="button" id="btn-sheets-test">Kirim baris tes</button>
-              <span class="muted" id="sync-status"></span>
-            </div>
+        <section class="card set-group">
+          <h3 class="title">Google Sheets</h3>
+          <div class="set-row stack">
+            <div class="set-label"><label for="set-sheets">URL Web App Apps Script</label><small>Setiap absen dikirim sebagai satu baris berisi nama, ID, waktu, dan status. Kode penerimanya ada di file Code.gs.</small></div>
+            <div class="set-ctrl wide"><input id="set-sheets" name="sheetsUrl" type="url" placeholder="https://script.google.com/macros/s/…/exec"></div>
           </div>
-        </div>
+          <div class="set-row">
+            <div class="set-label"><span class="lbl">Status</span><small id="sync-status">Belum terhubung.</small></div>
+            <div class="set-ctrl"><button class="btn outline" type="button" id="btn-sheets-test">Kirim baris tes</button></div>
+          </div>
+        </section>
 
-        <div class="panel">
-          <div class="panel-head"><h2>Keamanan dan data</h2></div>
-          <div class="form">
-            <div class="field">
-              <label for="set-pin">PIN admin (4–8 angka)</label>
-              <input id="set-pin" type="password" inputmode="numeric" pattern="[0-9]{4,8}" maxlength="8" placeholder="Kosongkan bila tidak dipakai">
-              <small id="pin-note">Bila diisi, menu selain Absen meminta PIN, jadi layar absen aman ditinggal.</small>
-            </div>
-            <div class="row-actions wrap">
-              <button class="btn" type="button" id="btn-backup">Unduh cadangan (.json)</button>
-              <label class="btn" for="file-restore">Pulihkan dari cadangan</label>
+        <section class="card set-group">
+          <h3 class="title">Keamanan dan data</h3>
+          <div class="set-row">
+            <div class="set-label"><label for="set-pin">PIN admin</label><small id="pin-note">Bila diisi, menu selain Absen meminta PIN.</small></div>
+            <div class="set-ctrl"><input id="set-pin" type="password" inputmode="numeric" pattern="[0-9]{4,8}" maxlength="8" placeholder="4–8 angka"></div>
+          </div>
+          <div class="set-row">
+            <div class="set-label"><span class="lbl">Cadangan</span><small id="storage-note">Data wajah tersimpan di browser perangkat ini saja.</small></div>
+            <div class="set-ctrl btns">
+              <button class="btn outline" type="button" id="btn-backup">Unduh cadangan</button>
+              <label class="btn outline" for="file-restore">Pulihkan</label>
               <input type="file" id="file-restore" accept="application/json,.json" hidden>
-              <button class="btn danger" type="button" id="btn-reset">Hapus semua data</button>
             </div>
-            <p class="note" id="storage-note">Data wajah tersimpan di browser perangkat ini saja dan tidak pernah dikirim ke server.</p>
           </div>
-        </div>
-
-        <div class="save-bar">
-          <span class="muted" id="save-state">Perubahan tersimpan otomatis.</span>
-        </div>
+          <div class="set-row">
+            <div class="set-label"><span class="lbl">Hapus semua data</span><small>Semua wajah dan riwayat absensi di perangkat ini.</small></div>
+            <div class="set-ctrl"><button class="btn danger" type="button" id="btn-reset">Hapus semua</button></div>
+          </div>
+        </section>
+        <p class="note" id="save-state">Perubahan tersimpan otomatis.</p>
       </form>
     </section>
   </main>
+
+  <nav class="dock" aria-label="Menu utama">
+    <button class="dest" type="button" data-view="absen" aria-current="page">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="10.5" r="2.6"/><path d="M8 16.5a4.4 4.4 0 0 1 8 0"/></svg>
+      <span class="dest-label">Absen</span>
+    </button>
+    <button class="dest" type="button" data-view="karyawan">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8.5" r="3.3"/><path d="M3 19a6 6 0 0 1 12 0"/><path d="M15.5 5.6a3 3 0 0 1 0 5.8M17.5 14a5.6 5.6 0 0 1 3.5 5"/></svg>
+      <span class="dest-label">Karyawan</span>
+    </button>
+    <button class="dest" type="button" data-view="rekap">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>
+      <span class="dest-label">Rekap</span>
+    </button>
+    <button class="dest" type="button" data-view="pengaturan">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg>
+      <span class="dest-label">Pengaturan</span>
+    </button>
+  </nav>
 
   <div class="modal" id="modal" hidden>
     <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
@@ -305,9 +348,43 @@
       <input id="modal-input" type="password" inputmode="numeric" maxlength="8" hidden>
       <p class="modal-error" id="modal-error" hidden></p>
       <div class="modal-actions">
-        <button class="btn ghost" type="button" id="modal-cancel">Batal</button>
-        <button class="btn primary" type="button" id="modal-ok">Lanjut</button>
+        <button class="btn outline" type="button" id="modal-cancel">Batal</button>
+        <button class="btn dark" type="button" id="modal-ok">Lanjut</button>
       </div>
+    </div>
+  </div>
+
+  <div class="modal" id="edit-modal" hidden>
+    <div class="modal-card edit-card" role="dialog" aria-modal="true" aria-labelledby="edit-title">
+      <div class="edit-head">
+        <span class="av edit-av" aria-hidden="true"><img id="edit-av" alt=""></span>
+        <div class="edit-head-tx">
+          <h2 id="edit-title">Ubah profil</h2>
+          <button class="btn outline sm" type="button" id="edit-shuffle">Acak ilustrasi</button>
+        </div>
+      </div>
+      <form id="edit-form" class="form" autocomplete="off">
+        <div class="field">
+          <label for="ed-nama">Nama lengkap</label>
+          <input id="ed-nama" required maxlength="60">
+        </div>
+        <div class="field-row">
+          <div class="field"><label for="ed-kode">ID karyawan</label><input id="ed-kode" maxlength="20"></div>
+          <div class="field"><label for="ed-divisi">Divisi</label><input id="ed-divisi" maxlength="30" list="divisi-list"></div>
+        </div>
+        <div class="field">
+          <span class="lbl" id="ed-gender-label">Jenis kelamin</span>
+          <div class="chips gender-chips" role="radiogroup" aria-labelledby="ed-gender-label">
+            <label class="chip"><input type="radio" name="ed-gender" value="L"><span>Laki-laki</span></label>
+            <label class="chip"><input type="radio" name="ed-gender" value="P"><span>Perempuan</span></label>
+            <label class="chip" id="ed-hijab-wrap" hidden><input type="checkbox" id="ed-hijab"><span>Berhijab</span></label>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn outline" type="button" id="edit-cancel">Batal</button>
+          <button class="btn dark" type="submit">Simpan</button>
+        </div>
+      </form>
     </div>
   </div>
 
